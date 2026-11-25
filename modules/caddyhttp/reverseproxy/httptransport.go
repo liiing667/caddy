@@ -758,13 +758,18 @@ type TLSConfig struct {
 	// If true, TLS verification of server certificates will be disabled.
 	// This is insecure and may be removed in the future. Do not use this
 	// option except in testing or local development environments.
+	//
+	// Because disabling verification removes all identity guarantees, this
+	// option must be paired with an explicit ServerName so the connection is
+	// still bound to a known upstream identity.
 	InsecureSkipVerify bool `json:"insecure_skip_verify,omitempty"`
 
 	// The duration to allow a TLS handshake to a server. Default: No timeout.
 	HandshakeTimeout caddy.Duration `json:"handshake_timeout,omitempty"`
 
 	// The server name used when verifying the certificate received in the TLS
-	// handshake. By default, this will use the upstream address' host part.
+	// handshake, and as the upstream identity when InsecureSkipVerify is set.
+	// By default, this will use the upstream address' host part.
 	// You only need to override this if your upstream address does not match the
 	// certificate the upstream is likely to use. For example if the upstream
 	// address is an IP address, then you would need to configure this to the
@@ -797,6 +802,13 @@ type TLSConfig struct {
 // If there is no custom TLS configuration, a nil config may be returned.
 func (t *TLSConfig) MakeTLSClientConfig(ctx caddy.Context) (*tls.Config, error) {
 	cfg := new(tls.Config)
+
+	// Skipping certificate verification without binding the connection to an
+	// explicit upstream identity would accept any certificate, including from
+	// an attacker-controlled upstream or a different backend reached on retry.
+	if t.InsecureSkipVerify && strings.TrimSpace(t.ServerName) == "" {
+		return nil, fmt.Errorf("insecure_skip_verify requires server_name to bind the connection to an upstream identity")
+	}
 
 	// client auth
 	if t.ClientCertificateFile != "" && t.ClientCertificateKeyFile == "" {

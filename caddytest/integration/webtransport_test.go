@@ -1169,7 +1169,7 @@ func wtH3Server(listen, handlerJSON string) string {
 }
 
 func wtReverseProxyHandler(extraJSON string, tlsExtra ...string) string {
-	tls := `"insecure_skip_verify": true`
+	tls := `"insecure_skip_verify": true, "server_name": "a.caddy.localhost"`
 	if len(tlsExtra) > 0 && tlsExtra[0] != "" {
 		tls = tlsExtra[0]
 	}

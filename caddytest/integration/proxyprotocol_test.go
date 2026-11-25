@@ -258,7 +258,8 @@ func proxyProtoTLSConfig(listenPort int, backendAddr, ppVersion string, transpor
 											"proxy_protocol": "%s",
 											"versions": %s,
 											"tls": {
-												"insecure_skip_verify": true
+												"insecure_skip_verify": true,
+												"server_name": "example.com"
 											}
 										}
 									}

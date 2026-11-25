@@ -134,6 +134,7 @@ func cmdReverseProxy(fs caddycmd.Flags) (int, error) {
 	// mixing schemes isn't supported, so use first defined (if available)
 	toAddresses := make([]string, len(to))
 	var toScheme string
+	var httpsHosts []string
 	for i, toLoc := range to {
 		addr, err := parseUpstreamDialAddress(toLoc)
 		if err != nil {
@@ -141,6 +142,9 @@ func cmdReverseProxy(fs caddycmd.Flags) (int, error) {
 		}
 		if addr.scheme != "" && toScheme == "" {
 			toScheme = addr.scheme
+		}
+		if addr.scheme == "https" {
+			httpsHosts = append(httpsHosts, addr.host)
 		}
 		toAddresses[i] = addr.dialAddr()
 	}
@@ -150,6 +154,18 @@ func cmdReverseProxy(fs caddycmd.Flags) (int, error) {
 	if toScheme == "https" {
 		ht.TLS = new(TLSConfig)
 		if insecure {
+			// --insecure disables certificate verification, so bind the
+			// transport to the upstream host identity instead of accepting
+			// any certificate. All HTTPS upstreams must share that identity.
+			if len(httpsHosts) == 0 || httpsHosts[0] == "" || strings.Contains(httpsHosts[0], "{") {
+				return caddy.ExitCodeFailedStartup, fmt.Errorf("--insecure requires a resolvable HTTPS upstream host")
+			}
+			for _, host := range httpsHosts[1:] {
+				if host != httpsHosts[0] {
+					return caddy.ExitCodeFailedStartup, fmt.Errorf("--insecure requires all HTTPS upstreams to share the same host identity")
+				}
+			}
+			ht.TLS.ServerName = httpsHosts[0]
 			ht.TLS.InsecureSkipVerify = true
 		}
 	}

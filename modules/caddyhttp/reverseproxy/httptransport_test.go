@@ -416,3 +416,70 @@ func TestTLSConfigRejectsUnknownCurve(t *testing.T) {
 		t.Fatal("expected an error for an unknown curve, got nil")
 	}
 }
+
+func TestTLSConfigInsecureSkipVerifyRequiresUpstreamIdentity(t *testing.T) {
+	ctx, cancel := caddy.NewContext(caddy.Context{Context: context.Background()})
+	defer cancel()
+
+	for _, tc := range []struct {
+		name    string
+		config  TLSConfig
+		wantErr bool
+	}{
+		{
+			name:    "skip verify without identity",
+			config:  TLSConfig{InsecureSkipVerify: true},
+			wantErr: true,
+		},
+		{
+			name:    "skip verify with blank identity",
+			config:  TLSConfig{InsecureSkipVerify: true, ServerName: "  "},
+			wantErr: true,
+		},
+		{
+			name:   "skip verify with explicit identity",
+			config: TLSConfig{InsecureSkipVerify: true, ServerName: "upstream.example"},
+		},
+		{
+			name:   "verified connection with identity",
+			config: TLSConfig{ServerName: "upstream.example"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := tc.config.MakeTLSClientConfig(ctx)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected an error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg == nil {
+				t.Fatal("expected a TLS client config, got nil")
+			}
+			if cfg.ServerName != tc.config.ServerName {
+				t.Errorf("ServerName = %q, want %q", cfg.ServerName, tc.config.ServerName)
+			}
+			if cfg.InsecureSkipVerify != tc.config.InsecureSkipVerify {
+				t.Errorf("InsecureSkipVerify = %v, want %v", cfg.InsecureSkipVerify, tc.config.InsecureSkipVerify)
+			}
+		})
+	}
+}
+
+func TestHTTPTransportProvisionRejectsUnboundInsecureSkipVerify(t *testing.T) {
+	ctx, cancel := caddy.NewContext(caddy.Context{Context: context.Background()})
+	defer cancel()
+
+	ht := &HTTPTransport{TLS: &TLSConfig{InsecureSkipVerify: true}}
+	if err := ht.Provision(ctx); err == nil {
+		t.Fatal("expected provisioning to reject insecure_skip_verify without an upstream identity")
+	}
+
+	ht = &HTTPTransport{TLS: &TLSConfig{InsecureSkipVerify: true, ServerName: "upstream.example"}}
+	if err := ht.Provision(ctx); err != nil {
+		t.Fatalf("provisioning an identity-bound insecure transport: %v", err)
+	}
+}
