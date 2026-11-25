@@ -183,6 +183,7 @@ func TestForwardAuthCopyHeadersAuthResponseWins(t *testing.T) {
 		forward_auth %s {
 			uri /
 			copy_headers X-User-Id X-User-Role
+			trust_unsigned_identity_headers
 		}
 		reverse_proxy %s
 	}
@@ -254,6 +255,7 @@ func TestForwardAuthCopyHeadersUnderscoreAlias(t *testing.T) {
 		forward_auth %s {
 			uri /
 			copy_headers Remote-User
+			trust_unsigned_identity_headers
 		}
 		reverse_proxy %s
 	}

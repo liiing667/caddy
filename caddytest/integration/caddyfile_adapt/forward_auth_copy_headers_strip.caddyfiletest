@@ -3,6 +3,7 @@
 forward_auth 127.0.0.1:9091 {
 	uri /
 	copy_headers X-User-Id X-User-Role
+	trust_unsigned_identity_headers
 }
 ----------
 {

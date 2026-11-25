@@ -6,6 +6,7 @@ forward_auth localhost:9000 {
 		D
 		E>5
 	}
+	trust_unsigned_identity_headers
 }
 ----------
 {

@@ -42,9 +42,14 @@ func init() {
 //	forward_auth auth-gateway:9091 {
 //	    uri /authenticate?redirect=https://auth.example.com
 //	    copy_headers Remote-User Remote-Email
+//	    identity_signing_key {env.FORWARD_AUTH_IDENTITY_KEY}
 //	}
 //
-// is equivalent to a reverse_proxy directive like this:
+// Copied identity headers are rejected unless the auth response contains a
+// valid detached HMAC-SHA256 signature in <Header>-Signature, or the
+// configuration explicitly sets trust_unsigned_identity_headers.
+//
+// This is equivalent to a reverse_proxy directive like this:
 //
 //	reverse_proxy auth-gateway:9091 {
 //	    method GET
@@ -110,6 +115,10 @@ func parseCaddyfile(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 	// onto the original request, so they can get passed
 	// through to a backend app
 	headersToCopy := make(map[string]string)
+	var (
+		identitySigningKey   string
+		trustUnsignedHeaders bool
+	)
 
 	// read the subdirectives for configuring the forward_auth shortcut
 	// NOTE: we delete the tokens as we go so that the reverse_proxy
@@ -162,8 +171,29 @@ func parseCaddyfile(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 				if len(headersToCopy) == 0 {
 					return nil, dispenser.ArgErr()
 				}
+
+			case "identity_signing_key":
+				if !dispenser.NextArg() {
+					return nil, dispenser.ArgErr()
+				}
+				identitySigningKey = dispenser.Val()
+				if dispenser.NextArg() {
+					return nil, dispenser.ArgErr()
+				}
+				dispenser.DeleteN(2)
+
+			case "trust_unsigned_identity_headers":
+				if dispenser.NextArg() {
+					return nil, dispenser.ArgErr()
+				}
+				trustUnsignedHeaders = true
+				dispenser.DeleteN(1)
 			}
 		}
+	}
+
+	if trustUnsignedHeaders && identitySigningKey != "" {
+		return nil, dispenser.Errf("identity_signing_key and trust_unsigned_identity_headers are mutually exclusive")
 	}
 
 	// reset the dispenser after we're done so that the reverse_proxy
@@ -229,6 +259,29 @@ func parseCaddyfile(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error)
 				"handler", "headers", nil,
 			)},
 		})
+
+		// Unless the operator explicitly trusts an unsigned auth responder,
+		// require a detached HMAC signature before a non-empty identity can
+		// replace the client-supplied header. The guard runs after the delete
+		// above and before the conditional Set below, so a failure leaves no
+		// usable client-controlled identity on the request.
+		if !trustUnsignedHeaders {
+			guard := IdentityGuard{
+				Identities: []IdentityHeader{{
+					Source: from,
+					Target: to,
+				}},
+				SigningKey: identitySigningKey,
+			}
+			copyHeaderRoutes = append(copyHeaderRoutes, caddyhttp.Route{
+				HandlersRaw: []json.RawMessage{caddyconfig.JSONModuleObject(
+					guard,
+					"handler",
+					"forward_auth_identity_guard",
+					nil,
+				)},
+			})
+		}
 
 		handler := &headers.Handler{
 			Request: &headers.HeaderOps{
