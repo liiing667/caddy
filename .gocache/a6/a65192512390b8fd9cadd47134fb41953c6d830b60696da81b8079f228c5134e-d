@@ -1,0 +1,5 @@
+./caddyfile.go
+./rewrite.go
+./rewrite_bench_test.go
+./rewrite_regexp_clean_test.go
+./rewrite_test.go

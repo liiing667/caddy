@@ -1,0 +1,4 @@
+./doc.go
+./propagator.go
+./registry.go
+./version.go

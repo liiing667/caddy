@@ -1,0 +1,6 @@
+./module.go
+./tracer.go
+./tracerprovider.go
+./module_test.go
+./tracer_test.go
+./tracerprovider_test.go

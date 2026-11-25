@@ -1,0 +1,10 @@
+=== RUN   TestAddForwardedHeadersNonIP
+--- PASS: TestAddForwardedHeadersNonIP (0.00s)
+=== RUN   TestAddForwardedHeaders_UnixSocketTrusted
+--- PASS: TestAddForwardedHeaders_UnixSocketTrusted (0.00s)
+=== RUN   TestAddForwardedHeaders_UnixSocketUntrusted
+--- PASS: TestAddForwardedHeaders_UnixSocketUntrusted (0.00s)
+=== RUN   TestAddForwardedHeaders_UnixSocketTrustedNoExistingHeaders
+--- PASS: TestAddForwardedHeaders_UnixSocketTrustedNoExistingHeaders (0.00s)
+PASS
+ok  	github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy	0.018s

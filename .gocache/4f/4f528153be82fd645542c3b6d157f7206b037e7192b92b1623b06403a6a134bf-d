@@ -1,0 +1,9 @@
+./appendencoder.go
+./cores.go
+./encoders.go
+./filewriter.go
+./filterencoder.go
+./filters.go
+./journaldencoder.go
+./netwriter.go
+./nopencoder.go

@@ -969,6 +969,21 @@ func (s *Server) serveHTTP(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
+	// Reject ambiguous client IP information from trusted proxies. Two or more
+	// distinct header fields for the same client IP header (default
+	// X-Forwarded-For) can be interpreted differently by the various proxies
+	// and upstreams along the chain, which allows client IP spoofing and
+	// access-control bypass. Requests from untrusted peers are unaffected
+	// because their forwarded headers are never relied upon.
+	if trusted, _ := GetVar(r.Context(), TrustedProxyVarKey).(bool); trusted {
+		if headerName := conflictingClientIPHeader(r, s.ClientIPHeaders); headerName != "" {
+			return HandlerError{
+				Err:        fmt.Errorf("conflicting %s header values from trusted proxy", headerName),
+				StatusCode: http.StatusBadRequest,
+			}
+		}
+	}
+
 	// execute the primary handler chain
 	return s.primaryHandlerChain.ServeHTTP(w, r)
 }
@@ -1997,6 +2012,28 @@ func strictUntrustedClientIp(r *http.Request, headers []string, trusted []netip.
 	}
 
 	return clientIP
+}
+
+// conflictingClientIPHeader returns the name of the first configured client
+// IP header that is present as more than one distinct header field, or an
+// empty string if none conflict. Multiple identical fields are equivalent to
+// a single comma-joined field (RFC 9110 section 5.2) and therefore not
+// considered a conflict, while distinct fields cannot be folded into a single
+// unambiguous forwarding chain and must be rejected.
+func conflictingClientIPHeader(r *http.Request, headers []string) string {
+	for _, headerName := range headers {
+		values := r.Header.Values(headerName)
+		if len(values) < 2 {
+			continue
+		}
+		first := values[0]
+		if slices.ContainsFunc(values[1:], func(value string) bool {
+			return value != first
+		}) {
+			return headerName
+		}
+	}
+	return ""
 }
 
 // cloneURL makes a copy of r.URL and returns a

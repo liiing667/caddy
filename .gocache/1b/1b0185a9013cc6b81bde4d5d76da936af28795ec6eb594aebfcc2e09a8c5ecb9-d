@@ -1,0 +1,4 @@
+./caddyfile.go
+./encode.go
+./accepted_encodings_bench_test.go
+./encode_test.go

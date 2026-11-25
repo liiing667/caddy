@@ -1,0 +1,3 @@
+./canonicalizer.go
+./options.go
+./profiles.go

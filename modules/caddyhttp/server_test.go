@@ -561,6 +561,181 @@ func TestServer_serveHTTP_RejectsPathLikeHost(t *testing.T) {
 	}
 }
 
+// TestServer_serveHTTP_RejectsConflictingClientIPHeaders ensures that a request
+// from a trusted proxy carrying two distinct header fields for the same client
+// IP header (default X-Forwarded-For) is rejected with 400 before reaching the
+// handler chain, while normal proxy chains, identical repeated fields, and
+// requests from untrusted peers keep working.
+func TestServer_serveHTTP_RejectsConflictingClientIPHeaders(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		trusted       bool
+		clientHeaders []string
+		header        string
+		values        []string
+		reject        bool
+	}{
+		{
+			name:          "trusted conflicting XFF fields",
+			trusted:       true,
+			clientHeaders: []string{"X-Forwarded-For"},
+			header:        "X-Forwarded-For",
+			values:        []string{"1.1.1.1", "2.2.2.2"},
+			reject:        true,
+		},
+		{
+			name:          "trusted conflicting XFF with comma-joined chain",
+			trusted:       true,
+			clientHeaders: []string{"X-Forwarded-For"},
+			header:        "X-Forwarded-For",
+			values:        []string{"1.1.1.1, 2.2.2.2", "3.3.3.3"},
+			reject:        true,
+		},
+		{
+			name:          "trusted conflicting custom client IP header",
+			trusted:       true,
+			clientHeaders: []string{"CF-Connecting-IP", "X-Forwarded-For"},
+			header:        "CF-Connecting-IP",
+			values:        []string{"1.1.1.1", "2.2.2.2"},
+			reject:        true,
+		},
+		{
+			name:          "trusted identical repeated fields",
+			trusted:       true,
+			clientHeaders: []string{"X-Forwarded-For"},
+			header:        "X-Forwarded-For",
+			values:        []string{"1.1.1.1", "1.1.1.1"},
+			reject:        false,
+		},
+		{
+			name:          "trusted normal single XFF chain",
+			trusted:       true,
+			clientHeaders: []string{"X-Forwarded-For"},
+			header:        "X-Forwarded-For",
+			values:        []string{"1.1.1.1, 2.2.2.2, 3.3.3.3"},
+			reject:        false,
+		},
+		{
+			name:          "trusted no client IP headers",
+			trusted:       true,
+			clientHeaders: []string{"X-Forwarded-For"},
+			reject:        false,
+		},
+		{
+			name:          "untrusted conflicting XFF fields",
+			trusted:       false,
+			clientHeaders: []string{"X-Forwarded-For"},
+			header:        "X-Forwarded-For",
+			values:        []string{"1.1.1.1", "2.2.2.2"},
+			reject:        false,
+		},
+		{
+			name:          "untrusted conflicting custom client IP header",
+			trusted:       false,
+			clientHeaders: []string{"CF-Connecting-IP", "X-Forwarded-For"},
+			header:        "CF-Connecting-IP",
+			values:        []string{"1.1.1.1", "2.2.2.2"},
+			reject:        false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			called := false
+			s := &Server{
+				logger:          zap.NewNop(),
+				ClientIPHeaders: tc.clientHeaders,
+				primaryHandlerChain: HandlerFunc(func(http.ResponseWriter, *http.Request) error {
+					called = true
+					return nil
+				}),
+			}
+
+			req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
+			if tc.header != "" {
+				for _, value := range tc.values {
+					req.Header.Add(tc.header, value)
+				}
+			}
+			req = req.WithContext(context.WithValue(req.Context(), VarsCtxKey, map[string]any{}))
+			SetVar(req.Context(), TrustedProxyVarKey, tc.trusted)
+
+			err := s.serveHTTP(httptest.NewRecorder(), req)
+			if !tc.reject {
+				require.NoError(t, err)
+				assert.True(t, called)
+				return
+			}
+			var handlerErr HandlerError
+			require.ErrorAs(t, err, &handlerErr)
+			assert.Equal(t, http.StatusBadRequest, handlerErr.StatusCode)
+			assert.False(t, called)
+		})
+	}
+}
+
+func TestServer_ConflictingClientIPHeader(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		headers  []string
+		setup    func(http.Header)
+		expected string
+	}{
+		{
+			name:    "no headers configured",
+			headers: nil,
+			setup:   func(http.Header) {},
+		},
+		{
+			name:    "single field",
+			headers: []string{"X-Forwarded-For"},
+			setup: func(h http.Header) {
+				h.Set("X-Forwarded-For", "1.1.1.1, 2.2.2.2")
+			},
+		},
+		{
+			name:    "identical repeated fields",
+			headers: []string{"X-Forwarded-For"},
+			setup: func(h http.Header) {
+				h.Add("X-Forwarded-For", "1.1.1.1")
+				h.Add("X-Forwarded-For", "1.1.1.1")
+			},
+		},
+		{
+			name:    "distinct repeated fields",
+			headers: []string{"X-Forwarded-For"},
+			setup: func(h http.Header) {
+				h.Add("X-Forwarded-For", "1.1.1.1")
+				h.Add("X-Forwarded-For", "2.2.2.2")
+			},
+			expected: "X-Forwarded-For",
+		},
+		{
+			name:    "first configured header wins",
+			headers: []string{"CF-Connecting-IP", "X-Forwarded-For"},
+			setup: func(h http.Header) {
+				h.Add("CF-Connecting-IP", "1.1.1.1")
+				h.Add("CF-Connecting-IP", "2.2.2.2")
+				h.Add("X-Forwarded-For", "3.3.3.3")
+				h.Add("X-Forwarded-For", "4.4.4.4")
+			},
+			expected: "CF-Connecting-IP",
+		},
+		{
+			name:    "unconfigured header ignored",
+			headers: []string{"X-Forwarded-For"},
+			setup: func(h http.Header) {
+				h.Add("X-Real-Ip", "1.1.1.1")
+				h.Add("X-Real-Ip", "2.2.2.2")
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			tc.setup(req.Header)
+			assert.Equal(t, tc.expected, conflictingClientIPHeader(req, tc.headers))
+		})
+	}
+}
+
 // TestServer_serveHTTP_DropsUnderscoreHeader covers GHSA-f59h-q822-g45g: an
 // underscore-named alias (e.g. `Remote_user`) of a hyphenated header must be
 // dropped before any handler runs.

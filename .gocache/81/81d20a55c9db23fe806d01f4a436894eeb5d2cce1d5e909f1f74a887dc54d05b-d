@@ -1,0 +1,34 @@
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_XFF_fields
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_XFF_with_comma-joined_chain
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_custom_client_IP_header
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_identical_repeated_fields
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_normal_single_XFF_chain
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_no_client_IP_headers
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/untrusted_conflicting_XFF_fields
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/untrusted_conflicting_custom_client_IP_header
+--- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_XFF_fields (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_XFF_with_comma-joined_chain (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_custom_client_IP_header (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_identical_repeated_fields (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_normal_single_XFF_chain (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_no_client_IP_headers (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/untrusted_conflicting_XFF_fields (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/untrusted_conflicting_custom_client_IP_header (0.00s)
+=== RUN   TestServer_ConflictingClientIPHeader
+=== RUN   TestServer_ConflictingClientIPHeader/no_headers_configured
+=== RUN   TestServer_ConflictingClientIPHeader/single_field
+=== RUN   TestServer_ConflictingClientIPHeader/identical_repeated_fields
+=== RUN   TestServer_ConflictingClientIPHeader/distinct_repeated_fields
+=== RUN   TestServer_ConflictingClientIPHeader/first_configured_header_wins
+=== RUN   TestServer_ConflictingClientIPHeader/unconfigured_header_ignored
+--- PASS: TestServer_ConflictingClientIPHeader (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/no_headers_configured (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/single_field (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/identical_repeated_fields (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/distinct_repeated_fields (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/first_configured_header_wins (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/unconfigured_header_ignored (0.00s)
+PASS
+ok  	github.com/caddyserver/caddy/v2/modules/caddyhttp	0.116s

@@ -1,0 +1,15 @@
+./caddyfile.go
+./client.go
+./fastcgi.go
+./header.go
+./pool.go
+./reader.go
+./record.go
+./writer.go
+./client_test.go
+./contentlength_test.go
+./fastcgi_test.go
+./incremental_test.go
+./redirect_test.go
+./request_trailers_test.go
+./responselength_test.go

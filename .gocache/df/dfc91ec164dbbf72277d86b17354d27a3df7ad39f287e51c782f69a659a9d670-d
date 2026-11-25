@@ -1,0 +1,14 @@
+./browse.go
+./browsetplcontext.go
+./caddyfile.go
+./command.go
+./matcher.go
+./staticfiles.go
+./browse_test.go
+./browsetplcontext_bench_test.go
+./browsetplcontext_test.go
+./matcher_cel_literal_test.go
+./matcher_root_test.go
+./matcher_test.go
+./staticfiles_hide_test.go
+./staticfiles_test.go

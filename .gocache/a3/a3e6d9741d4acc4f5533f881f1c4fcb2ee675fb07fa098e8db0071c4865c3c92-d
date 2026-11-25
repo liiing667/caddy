@@ -1,0 +1,4 @@
+./caddyfile.go
+./headers.go
+./headers_bench_test.go
+./headers_test.go

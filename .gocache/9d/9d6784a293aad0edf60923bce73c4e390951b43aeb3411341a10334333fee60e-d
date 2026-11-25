@@ -1,0 +1,5 @@
+./conversion.go
+./doc.go
+./errors.go
+./parse.go
+./types.go

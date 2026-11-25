@@ -1,0 +1,7 @@
+./caddyfile.go
+./frontmatter.go
+./templates.go
+./tplcontext.go
+./humanize_time_layout_test.go
+./templates_test.go
+./tplcontext_test.go

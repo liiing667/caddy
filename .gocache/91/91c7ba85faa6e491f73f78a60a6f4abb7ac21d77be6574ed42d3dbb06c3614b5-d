@@ -1,0 +1,10 @@
+./asn1.go
+./ca_pool.go
+./cert.go
+./cert_v1.go
+./cert_v1.pb.go
+./cert_v2.go
+./crypto.go
+./errors.go
+./pem.go
+./sign.go

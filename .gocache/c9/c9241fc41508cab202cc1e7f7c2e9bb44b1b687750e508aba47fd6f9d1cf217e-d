@@ -1,0 +1,184 @@
+=== RUN   TestServer_TrustedRealClientIP_NoTrustedHeaders
+--- PASS: TestServer_TrustedRealClientIP_NoTrustedHeaders (0.00s)
+=== RUN   TestServer_TrustedRealClientIP_OneTrustedHeaderEmpty
+--- PASS: TestServer_TrustedRealClientIP_OneTrustedHeaderEmpty (0.00s)
+=== RUN   TestServer_TrustedRealClientIP_OneTrustedHeaderInvalid
+--- PASS: TestServer_TrustedRealClientIP_OneTrustedHeaderInvalid (0.00s)
+=== RUN   TestServer_TrustedRealClientIP_OneTrustedHeaderValid
+--- PASS: TestServer_TrustedRealClientIP_OneTrustedHeaderValid (0.00s)
+=== RUN   TestServer_TrustedRealClientIP_OneTrustedHeaderValidArray
+--- PASS: TestServer_TrustedRealClientIP_OneTrustedHeaderValidArray (0.00s)
+=== RUN   TestServer_TrustedRealClientIP_IncludesPort
+--- PASS: TestServer_TrustedRealClientIP_IncludesPort (0.00s)
+=== RUN   TestServer_TrustedRealClientIP_SkipsInvalidIps
+--- PASS: TestServer_TrustedRealClientIP_SkipsInvalidIps (0.00s)
+=== RUN   TestServer_TrustedRealClientIP_MultipleTrustedHeaderValidArray
+--- PASS: TestServer_TrustedRealClientIP_MultipleTrustedHeaderValidArray (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_NoConfig
+--- PASS: TestServer_DetermineTrustedProxy_NoConfig (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_NoConfigIpv6
+--- PASS: TestServer_DetermineTrustedProxy_NoConfigIpv6 (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_NoConfigIpv6Zones
+--- PASS: TestServer_DetermineTrustedProxy_NoConfigIpv6Zones (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_TrustedLoopback
+--- PASS: TestServer_DetermineTrustedProxy_TrustedLoopback (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_UnixSocket
+--- PASS: TestServer_DetermineTrustedProxy_UnixSocket (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_UnixSocketStrict
+--- PASS: TestServer_DetermineTrustedProxy_UnixSocketStrict (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_UntrustedPrefix
+--- PASS: TestServer_DetermineTrustedProxy_UntrustedPrefix (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_MultipleTrustedPrefixes
+--- PASS: TestServer_DetermineTrustedProxy_MultipleTrustedPrefixes (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_MultipleTrustedClientHeaders
+--- PASS: TestServer_DetermineTrustedProxy_MultipleTrustedClientHeaders (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_MatchLeftMostValidIp
+--- PASS: TestServer_DetermineTrustedProxy_MatchLeftMostValidIp (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_MatchRightMostUntrusted
+--- PASS: TestServer_DetermineTrustedProxy_MatchRightMostUntrusted (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_MatchRightMostUntrustedSkippingEmpty
+--- PASS: TestServer_DetermineTrustedProxy_MatchRightMostUntrustedSkippingEmpty (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_MatchRightMostUntrustedSkippingTrusted
+--- PASS: TestServer_DetermineTrustedProxy_MatchRightMostUntrustedSkippingTrusted (0.00s)
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/.
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/..
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/..:443
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/[..]:443
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/../../..
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/a/b
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/a\b
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/..\..
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/a\x00b
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/...
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/....:443
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/.._
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/a_b
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/example.com
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/example.com:8443
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/example.com.
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/..example.com
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/127.0.0.1:80
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/[::1]:443
+=== RUN   TestServer_serveHTTP_RejectsPathLikeHost/[::1]
+--- PASS: TestServer_serveHTTP_RejectsPathLikeHost (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/. (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/.. (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/..:443 (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/[..]:443 (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/../../.. (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/a/b (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/a\b (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/..\.. (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/a\x00b (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/... (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/....:443 (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/.._ (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/a_b (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/example.com (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/example.com:8443 (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/example.com. (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/..example.com (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/127.0.0.1:80 (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/[::1]:443 (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsPathLikeHost/[::1] (0.00s)
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_XFF_fields
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_XFF_with_comma-joined_chain
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_custom_client_IP_header
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_identical_repeated_fields
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_normal_single_XFF_chain
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_no_client_IP_headers
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/untrusted_conflicting_XFF_fields
+=== RUN   TestServer_serveHTTP_RejectsConflictingClientIPHeaders/untrusted_conflicting_custom_client_IP_header
+--- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_XFF_fields (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_XFF_with_comma-joined_chain (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_conflicting_custom_client_IP_header (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_identical_repeated_fields (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_normal_single_XFF_chain (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/trusted_no_client_IP_headers (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/untrusted_conflicting_XFF_fields (0.00s)
+    --- PASS: TestServer_serveHTTP_RejectsConflictingClientIPHeaders/untrusted_conflicting_custom_client_IP_header (0.00s)
+=== RUN   TestServer_ConflictingClientIPHeader
+=== RUN   TestServer_ConflictingClientIPHeader/no_headers_configured
+=== RUN   TestServer_ConflictingClientIPHeader/single_field
+=== RUN   TestServer_ConflictingClientIPHeader/identical_repeated_fields
+=== RUN   TestServer_ConflictingClientIPHeader/distinct_repeated_fields
+=== RUN   TestServer_ConflictingClientIPHeader/first_configured_header_wins
+=== RUN   TestServer_ConflictingClientIPHeader/unconfigured_header_ignored
+--- PASS: TestServer_ConflictingClientIPHeader (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/no_headers_configured (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/single_field (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/identical_repeated_fields (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/distinct_repeated_fields (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/first_configured_header_wins (0.00s)
+    --- PASS: TestServer_ConflictingClientIPHeader/unconfigured_header_ignored (0.00s)
+=== RUN   TestServer_serveHTTP_DropsUnderscoreHeader
+--- PASS: TestServer_serveHTTP_DropsUnderscoreHeader (0.00s)
+=== RUN   TestServer_serveHTTP_LogsDroppedUnderscoreHeader
+--- PASS: TestServer_serveHTTP_LogsDroppedUnderscoreHeader (0.00s)
+=== RUN   TestServer_serveHTTP_DropsDotHeader
+--- PASS: TestServer_serveHTTP_DropsDotHeader (0.00s)
+=== RUN   TestServer_serveHTTP_LogsDroppedDotHeader
+--- PASS: TestServer_serveHTTP_LogsDroppedDotHeader (0.00s)
+=== RUN   TestServer_serveHTTP_AllowlistKeepsExactMatch
+--- PASS: TestServer_serveHTTP_AllowlistKeepsExactMatch (0.00s)
+=== RUN   TestServer_serveHTTP_AllowlistDropsHyphenatedVariant
+--- PASS: TestServer_serveHTTP_AllowlistDropsHyphenatedVariant (0.00s)
+=== RUN   TestServer_serveHTTP_AllowlistDropsUnlisted
+--- PASS: TestServer_serveHTTP_AllowlistDropsUnlisted (0.00s)
+=== RUN   TestServer_serveHTTP_AllowlistPassesThroughNormalHeaders
+--- PASS: TestServer_serveHTTP_AllowlistPassesThroughNormalHeaders (0.00s)
+=== RUN   TestServer_serveHTTP_MixedEntryKeepsOriginal
+--- PASS: TestServer_serveHTTP_MixedEntryKeepsOriginal (0.00s)
+=== RUN   TestServer_serveHTTP_MixedEntryDropsFullyHyphenated
+--- PASS: TestServer_serveHTTP_MixedEntryDropsFullyHyphenated (0.00s)
+=== RUN   TestServer_serveHTTP_MixedEntryDropsPartialVariants
+--- PASS: TestServer_serveHTTP_MixedEntryDropsPartialVariants (0.00s)
+=== RUN   TestServer_serveHTTP_PrefixGlobKeepsMatch
+--- PASS: TestServer_serveHTTP_PrefixGlobKeepsMatch (0.00s)
+=== RUN   TestServer_serveHTTP_PrefixGlobDropsHyphenatedVariant
+--- PASS: TestServer_serveHTTP_PrefixGlobDropsHyphenatedVariant (0.00s)
+=== RUN   TestServer_serveHTTP_PrefixGlobDropsNonMatching
+--- PASS: TestServer_serveHTTP_PrefixGlobDropsNonMatching (0.00s)
+=== RUN   TestServer_serveHTTP_PrefixGlobDropsMixedVariant
+--- PASS: TestServer_serveHTTP_PrefixGlobDropsMixedVariant (0.00s)
+=== RUN   TestServer_serveHTTP_LiteralAsteriskInHeader
+--- PASS: TestServer_serveHTTP_LiteralAsteriskInHeader (0.00s)
+=== RUN   TestServer_serveHTTP_DotAllowlistKeepsExactMatch
+--- PASS: TestServer_serveHTTP_DotAllowlistKeepsExactMatch (0.00s)
+=== RUN   TestServer_serveHTTP_DotAllowlistDropsHyphenatedVariant
+--- PASS: TestServer_serveHTTP_DotAllowlistDropsHyphenatedVariant (0.00s)
+=== RUN   TestServer_serveHTTP_DotAllowlistDropsUnderscoreVariant
+--- PASS: TestServer_serveHTTP_DotAllowlistDropsUnderscoreVariant (0.00s)
+=== RUN   TestServer_serveHTTP_DotAllowlistDropsUnlisted
+--- PASS: TestServer_serveHTTP_DotAllowlistDropsUnlisted (0.00s)
+=== RUN   TestServer_serveHTTP_DotPrefixGlobKeepsMatch
+--- PASS: TestServer_serveHTTP_DotPrefixGlobKeepsMatch (0.00s)
+=== RUN   TestServer_serveHTTP_BothAllowlistsCoexistForDifferentNames
+--- PASS: TestServer_serveHTTP_BothAllowlistsCoexistForDifferentNames (0.00s)
+=== RUN   TestServer_serveHTTP_BothAllowlistsPermitSameLogicalName
+--- PASS: TestServer_serveHTTP_BothAllowlistsPermitSameLogicalName (0.00s)
+=== RUN   TestServer_serveHTTP_DropsMixedUnderscoreDotHeaderByDefault
+--- PASS: TestServer_serveHTTP_DropsMixedUnderscoreDotHeaderByDefault (0.00s)
+=== RUN   TestServer_serveHTTP_PrefixGlobDoesNotLeakMixedHeader
+--- PASS: TestServer_serveHTTP_PrefixGlobDoesNotLeakMixedHeader (0.00s)
+=== RUN   TestServer_serveHTTP_ExactAllowlistPermitsMixedHeader
+--- PASS: TestServer_serveHTTP_ExactAllowlistPermitsMixedHeader (0.00s)
+=== RUN   TestServer_serveHTTP_ExactAllowlistDropsMixedHeaderRepeatedValues
+--- PASS: TestServer_serveHTTP_ExactAllowlistDropsMixedHeaderRepeatedValues (0.00s)
+=== RUN   TestServer_serveHTTP_ExactAndPrefixCoexist
+--- PASS: TestServer_serveHTTP_ExactAndPrefixCoexist (0.00s)
+=== RUN   TestServer_serveHTTP_AllowlistDropsRepeatedExact
+--- PASS: TestServer_serveHTTP_AllowlistDropsRepeatedExact (0.00s)
+=== RUN   TestServer_serveHTTP_AllowlistDropsRepeatedPrefixGlob
+--- PASS: TestServer_serveHTTP_AllowlistDropsRepeatedPrefixGlob (0.00s)
+=== RUN   TestServer_serveHTTP_LogsRepeatedValueDrop
+--- PASS: TestServer_serveHTTP_LogsRepeatedValueDrop (0.00s)
+=== RUN   TestServer_serveHTTP_LogsHyphenatedVariantDrop
+--- PASS: TestServer_serveHTTP_LogsHyphenatedVariantDrop (0.00s)
+=== RUN   TestServer_DetermineTrustedProxy_MatchRightMostUntrustedFirst
+--- PASS: TestServer_DetermineTrustedProxy_MatchRightMostUntrustedFirst (0.00s)
+PASS
+ok  	github.com/caddyserver/caddy/v2/modules/caddyhttp	0.053s

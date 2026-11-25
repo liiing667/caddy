@@ -1,0 +1,10 @@
+./argon2id.go
+./basicauth.go
+./bcrypt.go
+./caddyauth.go
+./caddyfile.go
+./command.go
+./basicauth_test.go
+./caddyauth_test.go
+./command_test.go
+./hashes_test.go

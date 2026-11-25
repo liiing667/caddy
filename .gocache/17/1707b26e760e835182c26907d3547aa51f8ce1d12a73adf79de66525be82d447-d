@@ -1,0 +1,15 @@
+./bytestring.go
+./cache.go
+./common.go
+./decode.go
+./decode_map_utils.go
+./diagnose.go
+./doc.go
+./encode.go
+./encode_any.go
+./encode_map.go
+./simplevalue.go
+./stream.go
+./structfields.go
+./tag.go
+./valid.go

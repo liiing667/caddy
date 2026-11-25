@@ -1,0 +1,4 @@
+./encode_bench_test.go
+./encode_conformance_test.go
+./encode_harness_test.go
+./sse_test.go

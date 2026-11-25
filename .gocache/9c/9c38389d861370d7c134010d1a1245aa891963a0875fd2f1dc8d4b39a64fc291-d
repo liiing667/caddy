@@ -1,0 +1,8 @@
+./certificate.go
+./certificate_request.go
+./fingerprint.go
+./funcs.go
+./options.go
+./sshutil.go
+./templates.go
+./types.go
