@@ -735,16 +735,20 @@ func (remote RemoteAdmin) enforceAccessControls(r *http.Request) error {
 
 	if keyRecognized {
 		// no entry allows this request; if the path is allowed by
-		// some entry, the method is what's missing
+		// some entry, the method is what's missing; either way, identify
+		// the object the request targeted by its normalized path, so that
+		// equivalent encodings of the same path (e.g. "/config%2Fapps" and
+		// "/config/apps") produce the same identity in the audit log
+		normPath := normalizedAdminPath(r.URL.Path)
 		if pathAllowedSomewhere {
 			return APIError{
 				HTTPStatus: http.StatusForbidden,
-				Message:    "not authorized to use this method",
+				Message:    fmt.Sprintf("not authorized to use method %s on path %s", r.Method, normPath),
 			}
 		}
 		return APIError{
 			HTTPStatus: http.StatusForbidden,
-			Message:    "not authorized to access this path",
+			Message:    fmt.Sprintf("not authorized to access path %s", normPath),
 		}
 	}
 
@@ -755,6 +759,19 @@ func (remote RemoteAdmin) enforceAccessControls(r *http.Request) error {
 		HTTPStatus: http.StatusUnauthorized,
 		Message:    "client identity not authorized",
 	}
+}
+
+// normalizedAdminPath returns the canonical form of an admin API request
+// path. net/http has already percent-decoded the path, so equivalent
+// encodings of the same object arrive here identical; cleaning collapses
+// any remaining dot segments and duplicate slashes. Access control denials
+// report this form so that audit logs can correlate rejections no matter
+// how the request target was encoded.
+func normalizedAdminPath(reqPath string) string {
+	if reqPath == "" {
+		return "/"
+	}
+	return path.Clean(reqPath)
 }
 
 func adminPathAllowed(reqPath, allowedPath string) bool {

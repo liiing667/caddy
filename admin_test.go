@@ -859,7 +859,7 @@ func TestRemoteAdminAccessControlMultiplePermissions(t *testing.T) {
 			},
 			method:      http.MethodPost,
 			requestPath: "/config/",
-			wantErr:     "not authorized to use this method",
+			wantErr:     "not authorized to use method POST on path /config",
 		},
 		{
 			name: "path allowed by no entry",
@@ -869,7 +869,7 @@ func TestRemoteAdminAccessControlMultiplePermissions(t *testing.T) {
 			},
 			method:      http.MethodGet,
 			requestPath: "/stop",
-			wantErr:     "not authorized to access this path",
+			wantErr:     "not authorized to access path /stop",
 		},
 		{
 			name: "later access entry with the same key matches",
@@ -892,7 +892,7 @@ func TestRemoteAdminAccessControlMultiplePermissions(t *testing.T) {
 			},
 			method:      http.MethodPost,
 			requestPath: "/load",
-			wantErr:     "not authorized to use this method",
+			wantErr:     "not authorized to use method POST on path /load",
 		},
 	}
 
@@ -937,6 +937,77 @@ func TestRemoteAdminAccessControlMultiplePermissions(t *testing.T) {
 				t.Errorf("%s %s: expected message %q, got %q", test.method, test.requestPath, test.wantErr, apiErr.Message)
 			}
 		})
+	}
+}
+
+func TestRemoteAdminAccessControlDenialReportsNormalizedPath(t *testing.T) {
+	const authorizedKey testAdminPublicKey = "authorized"
+	peerCert := &x509.Certificate{PublicKey: authorizedKey}
+
+	remote := RemoteAdmin{
+		AccessControl: []*AdminAccess{
+			{
+				Permissions: []AdminPermissions{
+					{Methods: []string{http.MethodGet}, Paths: []string{"/pki/"}},
+				},
+				publicKeys: []crypto.PublicKey{authorizedKey},
+			},
+		},
+	}
+
+	// equivalent encodings of the same private object must all be rejected
+	// with the same normalized identity, so audit logs can correlate them
+	for _, requestPath := range []string{
+		"/config%2Fapps", // encoded slash
+		"/config%2fapps", // same encoding, lowercase hex
+		"/config/%61pps", // encoded 'a'
+		"/%63onfig/apps", // encoded 'c'
+		"/config//apps",  // duplicate slash
+		"/config/./apps", // dot segment
+		"/config/apps",   // canonical form
+	} {
+		req := httptest.NewRequest(http.MethodGet, "https://localhost:2021"+requestPath, nil)
+		req.TLS = &tls.ConnectionState{
+			VerifiedChains: [][]*x509.Certificate{{peerCert}},
+		}
+
+		err := remote.enforceAccessControls(req)
+		var apiErr APIError
+		if !errors.As(err, &apiErr) {
+			t.Errorf("%s: expected APIError, got %T: %v", requestPath, err, err)
+			continue
+		}
+		if apiErr.HTTPStatus != http.StatusForbidden {
+			t.Errorf("%s: expected HTTP status %d, got %d", requestPath, http.StatusForbidden, apiErr.HTTPStatus)
+		}
+		if want := "not authorized to access path /config/apps"; apiErr.Message != want {
+			t.Errorf("%s: expected message %q, got %q", requestPath, want, apiErr.Message)
+		}
+	}
+
+	// a disallowed method on an allowed path must also identify the object
+	req := httptest.NewRequest(http.MethodDelete, "https://localhost:2021/pki%2Fca", nil)
+	req.TLS = &tls.ConnectionState{
+		VerifiedChains: [][]*x509.Certificate{{peerCert}},
+	}
+	err := remote.enforceAccessControls(req)
+	var apiErr APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected APIError, got %T: %v", err, err)
+	}
+	if want := "not authorized to use method DELETE on path /pki/ca"; apiErr.Message != want {
+		t.Errorf("expected message %q, got %q", want, apiErr.Message)
+	}
+
+	// public paths must remain accessible, however they are encoded
+	for _, requestPath := range []string{"/pki/ca", "/pki%2Fca", "/pki//ca", "/pki/ca/prod"} {
+		req := httptest.NewRequest(http.MethodGet, "https://localhost:2021"+requestPath, nil)
+		req.TLS = &tls.ConnectionState{
+			VerifiedChains: [][]*x509.Certificate{{peerCert}},
+		}
+		if err := remote.enforceAccessControls(req); err != nil {
+			t.Errorf("%s: expected no error, got %v", requestPath, err)
+		}
 	}
 }
 
