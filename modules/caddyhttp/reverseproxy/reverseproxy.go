@@ -679,8 +679,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if errors.Is(err, errIncrementalRefused) {
 			return h.refuseIncremental(w, nil)
 		}
+		var handlerErr caddyhttp.HandlerError
+		if errors.As(err, &handlerErr) && handlerErr.StatusCode != 0 {
+			return handlerErr
+		}
 		return caddyhttp.Error(http.StatusInternalServerError,
-			fmt.Errorf("preparing request for upstream round-trip: %v", err))
+			fmt.Errorf("preparing request for upstream round-trip: %w", err))
 	}
 
 	// websocket over http2 or http3 if extended connect is enabled, assuming backend doesn't support this, the request will be modified to http1.1 upgrade
@@ -979,6 +983,16 @@ func normalizeWebsocketHeaders(header http.Header) {
 // proxying) regardless of proxy retries. This assumes that no mutations
 // of the cloned request are performed by h during or after proxying.
 func (h Handler) prepareRequest(req *http.Request, repl *caddy.Replacer) (*http.Request, error) {
+	// Reject a client attempt to reclassify a protected credential header
+	// as hop-by-hop before cloning, buffering, selecting an upstream, or
+	// entering the retry loop. This keeps the credential decision stable
+	// across retries and header operations. Standard upgrade tokens do not
+	// nominate Authorization and continue through normal preparation.
+	if field := caddyhttp.InvalidConnectionCredential(req.Header); field != "" {
+		return nil, caddyhttp.Error(http.StatusBadRequest,
+			fmt.Errorf("invalid Connection header: %s is an end-to-end credential header", field))
+	}
+
 	origReq := req
 	req = cloneRequest(req)
 

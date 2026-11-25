@@ -590,6 +590,27 @@ func (s *Server) isHyphenatedVariant(key string) bool {
 
 var defaultProtocols = []string{"h1", "h2", "h3"}
 
+// protectedConnectionOptions contains end-to-end header fields whose
+// forwarding decision must not be changed by a client-supplied Connection
+// field. Proxy-Authorization is intentionally absent because it is already a
+// hop-by-hop field and is always stripped independently of Connection.
+var protectedConnectionOptions = []string{
+	"Authorization",
+}
+
+// InvalidConnectionCredential reports whether h's Connection field nominates
+// a protected credential header as a hop-by-hop option. It returns the
+// canonical name of the first protected header found, or an empty string.
+func InvalidConnectionCredential(h http.Header) string {
+	connection := h.Values("Connection")
+	for _, name := range protectedConnectionOptions {
+		if httpguts.HeaderValuesContainsToken(connection, name) {
+			return name
+		}
+	}
+	return ""
+}
+
 var (
 	ServerHeader = "Caddy"
 	serverHeader = []string{ServerHeader}
@@ -857,6 +878,18 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) serveHTTP(w http.ResponseWriter, r *http.Request) error {
+	// A client must not be able to reclassify an end-to-end credential
+	// header as hop-by-hop and make retry/header-ops logic disagree about
+	// whether the credential was forwarded. Reject before routing or
+	// establishing an upstream connection. Protocol upgrades use other
+	// Connection tokens (for example, Upgrade) and remain allowed.
+	if field := InvalidConnectionCredential(r.Header); field != "" {
+		return HandlerError{
+			Err:        fmt.Errorf("invalid Connection header: %s is an end-to-end credential header", field),
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
 	// Drop headers whose names contain `_` or `.`: once FastCGI/CGI/FrankenPHP etc.
 	// rewrites `-` to `_` (and PHP additionally folds `.` to `_` when registering
 	// $_SERVER keys), an underscore or dot alias collides with the legitimate
