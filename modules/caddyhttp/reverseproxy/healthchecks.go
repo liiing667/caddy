@@ -314,7 +314,7 @@ func (h *Handler) doActiveHealthCheckForAllHosts() {
 			if err != nil {
 				if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "invalid use of placeholders in dial address for active health checks"); c != nil {
 					c.Write(
-						zap.String("address", networkAddr),
+						zap.String("address", upstreamAddressWithoutUserinfo(networkAddr)),
 						zap.Error(err),
 					)
 				}
@@ -324,7 +324,7 @@ func (h *Handler) doActiveHealthCheckForAllHosts() {
 			if err != nil {
 				if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "bad network address"); c != nil {
 					c.Write(
-						zap.String("address", networkAddr),
+						zap.String("address", upstreamAddressWithoutUserinfo(networkAddr)),
 						zap.Error(err),
 					)
 				}
@@ -339,7 +339,7 @@ func (h *Handler) doActiveHealthCheckForAllHosts() {
 			if addr.PortRangeSize() != 1 {
 				if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "multiple addresses (upstream must map to only one address)"); c != nil {
 					c.Write(
-						zap.String("address", networkAddr),
+						zap.String("address", upstreamAddressWithoutUserinfo(networkAddr)),
 					)
 				}
 				return
@@ -372,7 +372,7 @@ func (h *Handler) doActiveHealthCheckForAllHosts() {
 			if err != nil {
 				if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "active health check failed"); c != nil {
 					c.Write(
-						zap.String("address", hostAddr),
+						zap.String("address", upstreamAddressWithoutUserinfo(hostAddr)),
 						zap.Error(err),
 					)
 				}
@@ -472,7 +472,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 		if err != nil {
 			if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "could not count active health failure"); c != nil {
 				c.Write(
-					zap.String("host", upstream.Dial),
+					zap.String("host", upstreamAddressWithoutUserinfo(upstream.Dial)),
 					zap.Error(err),
 				)
 			}
@@ -493,7 +493,7 @@ func (h *Handler) doActiveHealthCheck(dialInfo DialInfo, hostAddr string, networ
 		if err != nil {
 			if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "could not count active health pass"); c != nil {
 				c.Write(
-					zap.String("host", upstream.Dial),
+					zap.String("host", upstreamAddressWithoutUserinfo(upstream.Dial)),
 					zap.Error(err),
 				)
 			}
@@ -605,7 +605,7 @@ func (h *Handler) countFailure(upstream *Upstream) {
 	if err != nil {
 		if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "could not count failure"); c != nil {
 			c.Write(
-				zap.String("host", upstream.Dial),
+				zap.String("host", upstreamAddressWithoutUserinfo(upstream.Dial)),
 				zap.Error(err),
 			)
 		}
@@ -636,7 +636,7 @@ func (h *Handler) countFailure(upstream *Upstream) {
 		if err != nil {
 			if c := h.HealthChecks.Active.logger.Check(zapcore.ErrorLevel, "could not forget failure"); c != nil {
 				c.Write(
-					zap.String("host", upstream.Dial),
+					zap.String("host", upstreamAddressWithoutUserinfo(upstream.Dial)),
 					zap.Error(err),
 				)
 			}

@@ -319,6 +319,9 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 	h.tunnelTracker = newTunnelTracker(h.logger, time.Duration(h.StreamCloseDelay))
 	h.streamLogLevel = defaultStreamLogLevel
 	h.streamLogLoggerName = defaultStreamLoggerName
+	if err := h.validateUpstreams(); err != nil {
+		return err
+	}
 	if h.StreamLogs != nil {
 		if h.StreamLogs.Level != "" {
 			lvl, err := zapcore.ParseLevel(strings.ToLower(strings.TrimSpace(h.StreamLogs.Level)))
@@ -582,6 +585,9 @@ func (h *Handler) Cleanup() error {
 	// even if StreamDetached is true, extended connect websockets may still be running
 	err := h.tunnelTracker.cleanupAttachedConnections()
 	for _, upstream := range h.Upstreams {
+		if upstream == nil {
+			continue
+		}
 		// hosts.Delete returns deleted=true when the ref count reaches zero,
 		// meaning no other active config references this upstream. In that
 		// case close any tunnels proxying to it; otherwise let them survive
@@ -592,8 +598,33 @@ func (h *Handler) Cleanup() error {
 				err = closeErr
 			}
 		}
+		// Do not leave credentials from the unloaded configuration in memory.
+		upstream.Dial = upstreamAddressWithoutUserinfo(upstream.Dial)
 	}
 	return err
+}
+
+// validateUpstreams rejects upstream addresses that embed credentials.
+func (h *Handler) validateUpstreams() error {
+	for i, upstream := range h.Upstreams {
+		if upstream == nil {
+			continue
+		}
+		if upstreamAddressHasUserinfo(upstream.Dial) {
+			return fmt.Errorf("upstream %d: %w", i, errUpstreamUserinfo)
+		}
+	}
+	if h.HealthChecks != nil &&
+		h.HealthChecks.Active != nil &&
+		upstreamAddressHasUserinfo(h.HealthChecks.Active.Upstream) {
+		return fmt.Errorf("health check upstream: %w", errUpstreamUserinfo)
+	}
+	return nil
+}
+
+// Validate ensures no configured upstream address embeds credentials.
+func (h *Handler) Validate() error {
+	return h.validateUpstreams()
 }
 
 // bodyNopCloserIfNotRead wraps a request body to prevent closing if not read, i.e., when
@@ -1331,7 +1362,7 @@ func (h *Handler) reverseProxy(rw http.ResponseWriter, req *http.Request, origRe
 	// emit debug log with values we know are safe,
 	// or if there is no error, emit fuller log entry
 	logger := h.logger.With(
-		zap.String("upstream", di.Upstream.String()),
+		zap.String("upstream", upstreamAddressWithoutUserinfo(di.Upstream.String())),
 		zap.Duration("duration", duration),
 		zap.Object("request", caddyhttp.LoggableHTTPRequest{
 			Request:              req,
@@ -2523,6 +2554,7 @@ const (
 // Interface guards
 var (
 	_ caddy.Provisioner           = (*Handler)(nil)
+	_ caddy.Validator             = (*Handler)(nil)
 	_ caddy.CleanerUpper          = (*Handler)(nil)
 	_ caddyhttp.MiddlewareHandler = (*Handler)(nil)
 )

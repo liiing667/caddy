@@ -14,7 +14,14 @@
 
 package reverseproxy
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"go.uber.org/zap"
+
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+)
 
 func TestParseUpstreamDialAddress(t *testing.T) {
 	for i, tc := range []struct {
@@ -235,6 +242,34 @@ func TestParseUpstreamDialAddress(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			input:     "http://alice:s3cret@foo",
+			expectErr: true,
+		},
+		{
+			input:     "https://alice:s3cret@foo:8443",
+			expectErr: true,
+		},
+		{
+			input:     "h2c://alice:s3cret@foo",
+			expectErr: true,
+		},
+		{
+			input:     "http://alice@foo",
+			expectErr: true,
+		},
+		{
+			input:     "http://alice:s3cret@foo:8001-8002",
+			expectErr: true,
+		},
+		{
+			input:     "alice:s3cret@foo:1234",
+			expectErr: true,
+		},
+		{
+			input:     "alice:s3cret@foo",
+			expectErr: true,
+		},
+		{
 			input:     "http://foo:443",
 			expectErr: true,
 		},
@@ -264,6 +299,15 @@ func TestParseUpstreamDialAddress(t *testing.T) {
 			expectHostPort: "unix/c:/absolute/path",
 			expectScheme:   "h2c",
 		},
+		{
+			input:          "unix//tmp/backend@socket",
+			expectHostPort: "unix//tmp/backend@socket",
+		},
+		{
+			input:          "unix+h2c//tmp/backend@socket",
+			expectHostPort: "unix//tmp/backend@socket",
+			expectScheme:   "h2c",
+		},
 	} {
 		actualAddr, err := parseUpstreamDialAddress(tc.input)
 		if tc.expectErr && err == nil {
@@ -278,5 +322,98 @@ func TestParseUpstreamDialAddress(t *testing.T) {
 		if actualAddr.scheme != tc.expectScheme {
 			t.Errorf("Test %d: Expected scheme '%s' but got '%s'", i, tc.expectScheme, actualAddr.scheme)
 		}
+	}
+}
+
+func TestParseUpstreamDialAddressUserinfoNotLeaked(t *testing.T) {
+	for i, tc := range []struct {
+		input  string
+		secret string
+	}{
+		{input: "http://alice:s3cret@foo", secret: "s3cret"},
+		{input: "http://alice:s3cret@foo:8001-8002", secret: "s3cret"},
+		{input: "http://alice:s3cret@foo:8001-8002/path", secret: "s3cret"},
+		{input: "http://alice:s3cret@foo:443", secret: "s3cret"},
+		{input: "alice:s3cret@foo:1234", secret: "s3cret"},
+	} {
+		_, err := parseUpstreamDialAddress(tc.input)
+		if err == nil {
+			t.Errorf("Test %d: expected error for %q but got none", i, tc.input)
+			continue
+		}
+		if strings.Contains(err.Error(), tc.secret) {
+			t.Errorf("Test %d: error leaked userinfo secret: %v", i, err)
+		}
+	}
+}
+
+func TestUnmarshalCaddyfileUserinfoNotLeaked(t *testing.T) {
+	for i, input := range []string{
+		"reverse_proxy http://alice:s3cret@backend/path",
+		"reverse_proxy {\n\tto http://alice:s3cret@backend/path\n}",
+	} {
+		d := caddyfile.NewTestDispenser(input)
+		h := new(Handler)
+		err := h.UnmarshalCaddyfile(d)
+		if err == nil {
+			t.Errorf("Test %d: expected error but got none", i)
+			continue
+		}
+		if strings.Contains(err.Error(), "s3cret") {
+			t.Errorf("Test %d: error leaked userinfo secret: %v", i, err)
+		}
+	}
+}
+
+func TestHandlerRejectsUserinfoUpstreams(t *testing.T) {
+	for i, tc := range []struct {
+		dial    string
+		wantErr bool
+	}{
+		{dial: "http://alice:s3cret@backend:8080", wantErr: true},
+		{dial: "alice:s3cret@backend:8080", wantErr: true},
+		{dial: "alice@backend:8080", wantErr: true},
+		{dial: "backend:8080"},
+		{dial: "unix//tmp/backend@socket"},
+	} {
+		h := &Handler{Upstreams: UpstreamPool{{Dial: tc.dial}}}
+		err := h.Validate()
+		if tc.wantErr && err == nil {
+			t.Errorf("Test %d: expected error for %q but got none", i, tc.dial)
+		}
+		if !tc.wantErr && err != nil {
+			t.Errorf("Test %d: unexpected error for %q: %v", i, tc.dial, err)
+		}
+		if err != nil && strings.Contains(err.Error(), "s3cret") {
+			t.Errorf("Test %d: error leaked userinfo secret: %v", i, err)
+		}
+	}
+}
+
+func TestHandlerRejectsUserinfoHealthCheckUpstream(t *testing.T) {
+	h := &Handler{
+		HealthChecks: &HealthChecks{
+			Active: &ActiveHealthChecks{Upstream: "alice:s3cret@backend:80"},
+		},
+	}
+	err := h.Validate()
+	if err == nil {
+		t.Fatal("expected error for health check upstream with userinfo, got none")
+	}
+	if strings.Contains(err.Error(), "s3cret") {
+		t.Errorf("error leaked userinfo secret: %v", err)
+	}
+}
+
+func TestHandlerCleanupRemovesUserinfo(t *testing.T) {
+	h := &Handler{
+		Upstreams:     UpstreamPool{{Dial: "alice:s3cret@backend:80"}},
+		tunnelTracker: newTunnelTracker(zap.NewNop(), 0),
+	}
+	if err := h.Cleanup(); err != nil {
+		t.Fatalf("cleanup: %v", err)
+	}
+	if strings.Contains(h.Upstreams[0].Dial, "s3cret") {
+		t.Errorf("credentials remained in upstream address after cleanup: %q", h.Upstreams[0].Dial)
 	}
 }

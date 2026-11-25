@@ -115,13 +115,17 @@ func (u *Upstream) fillDialInfo(repl *caddy.Replacer) (DialInfo, error) {
 	// use provided dial address
 	var err error
 	dial := repl.ReplaceAll(u.Dial, "")
+	if upstreamAddressHasUserinfo(dial) {
+		return DialInfo{}, errUpstreamUserinfo
+	}
 	addr, err = caddy.ParseNetworkAddress(dial)
 	if err != nil {
-		return DialInfo{}, fmt.Errorf("upstream %s: invalid dial address %s: %v", u.Dial, dial, err)
+		return DialInfo{}, fmt.Errorf("upstream %s: invalid dial address %s: %v",
+			upstreamAddressWithoutUserinfo(u.Dial), upstreamAddressWithoutUserinfo(dial), err)
 	}
 	if numPorts := addr.PortRangeSize(); numPorts != 1 {
 		return DialInfo{}, fmt.Errorf("upstream %s: dial address must represent precisely one socket: %s represents %d",
-			u.Dial, dial, numPorts)
+			upstreamAddressWithoutUserinfo(u.Dial), upstreamAddressWithoutUserinfo(dial), numPorts)
 	}
 
 	return DialInfo{

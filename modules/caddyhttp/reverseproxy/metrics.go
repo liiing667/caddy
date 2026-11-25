@@ -166,7 +166,7 @@ func (m *metricsUpstreamsHealthyUpdater) init() {
 
 func (m *metricsUpstreamsHealthyUpdater) update() {
 	for _, upstream := range m.handler.Upstreams {
-		labels := prometheus.Labels{"upstream": upstream.Dial}
+		labels := prometheus.Labels{"upstream": upstreamAddressWithoutUserinfo(upstream.Dial)}
 
 		gaugeValue := 0.0
 		if upstream.Healthy() {

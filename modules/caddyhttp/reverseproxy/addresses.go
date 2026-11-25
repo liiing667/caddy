@@ -15,6 +15,7 @@
 package reverseproxy
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -58,12 +59,92 @@ func (p parsedAddr) isUnix() bool {
 	return caddy.IsUnixNetwork(p.network)
 }
 
+// errUpstreamUserinfo is returned when an upstream address embeds credentials.
+// The message intentionally omits the address so the credentials are not
+// repeated in diagnostics.
+var errUpstreamUserinfo = errors.New("upstream address contains userinfo, which is not supported; set an Authorization header with the header_up directive instead")
+
+// upstreamAddressHasUserinfo reports whether the upstream address embeds
+// userinfo (a username and/or password). URL userinfo is only valid in the
+// authority component, so the check is deliberately limited to that part to
+// avoid rejecting paths that merely contain an '@' character. Non-URL
+// addresses are checked for an '@' anywhere in the address, except for unix
+// and file-descriptor networks whose host is a filesystem path.
+func upstreamAddressHasUserinfo(upstreamAddr string) bool {
+	if idx := strings.Index(upstreamAddr, "://"); idx >= 0 {
+		authority := upstreamAddr[idx+len("://"):]
+		if end := strings.IndexAny(authority, "/?#"); end >= 0 {
+			authority = authority[:end]
+		}
+		return strings.Contains(authority, "@")
+	}
+
+	network, _, _, _ := caddy.SplitNetworkAddress(upstreamAddr)
+	if caddy.IsUnixNetwork(network) || caddy.IsFdNetwork(network) {
+		return false
+	}
+	// SplitNetworkAddress can split a userinfo-like address with no port
+	// into nonsensical host and port components, so inspect the whole
+	// address. '@' is not valid in a TCP/UDP host or port.
+	return strings.Contains(upstreamAddr, "@")
+}
+
+// upstreamAddressWithoutUserinfo returns the upstream address with any
+// userinfo removed. It is intended for diagnostics only and errs on the side
+// of removing anything that looks like userinfo.
+func upstreamAddressWithoutUserinfo(upstreamAddr string) string {
+	if idx := strings.Index(upstreamAddr, "://"); idx >= 0 {
+		authority := upstreamAddr[idx+len("://"):]
+		end := len(authority)
+		if i := strings.IndexAny(authority, "/?#"); i >= 0 {
+			end = i
+		}
+		if at := strings.LastIndex(authority[:end], "@"); at >= 0 {
+			return upstreamAddr[:idx+len("://")] + authority[at+1:]
+		}
+		return upstreamAddr
+	}
+
+	network, _, _, _ := caddy.SplitNetworkAddress(upstreamAddr)
+	if caddy.IsUnixNetwork(network) || caddy.IsFdNetwork(network) {
+		return upstreamAddr
+	}
+	at := strings.LastIndex(upstreamAddr, "@")
+	if at < 0 {
+		return upstreamAddr
+	}
+	prefix := ""
+	if network != "" {
+		if i := strings.Index(upstreamAddr, "/"); i >= 0 {
+			prefix = upstreamAddr[:i+1]
+		}
+	}
+	return prefix + upstreamAddr[at+1:]
+}
+
+// urlErrorReason extracts the underlying reason from a URL parsing error
+// without including the original URL, which may contain credentials.
+func urlErrorReason(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return urlErr.Err
+	}
+	return errors.New("invalid URL")
+}
+
 // parseUpstreamDialAddress parses configuration inputs for
 // the dial address, including support for a scheme in front
 // as a shortcut for the port number, and a network type,
 // for example 'unix' to dial a unix socket.
 func parseUpstreamDialAddress(upstreamAddr string) (parsedAddr, error) {
 	var network, scheme, host, port string
+
+	// Credentials in an upstream address have never been used for
+	// authentication, and accepting them would expose the plaintext
+	// password through the config, logs, and error messages.
+	if upstreamAddressHasUserinfo(upstreamAddr) {
+		return parsedAddr{}, errUpstreamUserinfo
+	}
 
 	if strings.Contains(upstreamAddr, "://") {
 		// we get a parsing error if a placeholder is specified
@@ -81,19 +162,19 @@ func parseUpstreamDialAddress(upstreamAddr string) (parsedAddr, error) {
 			if strings.Contains(err.Error(), "invalid port") && strings.Contains(err.Error(), "-") {
 				index := strings.LastIndex(upstreamAddr, ":")
 				if index == -1 {
-					return parsedAddr{}, fmt.Errorf("parsing upstream URL: %v", err)
+					return parsedAddr{}, fmt.Errorf("parsing upstream URL: %v", urlErrorReason(err))
 				}
 				portRange := upstreamAddr[index+1:]
 				if strings.Count(portRange, "-") != 1 {
-					return parsedAddr{}, fmt.Errorf("parsing upstream URL: parse \"%v\": port range invalid: %v", upstreamAddr, portRange)
+					return parsedAddr{}, fmt.Errorf("parsing upstream URL: port range invalid: %v", portRange)
 				}
 				toURL, err = url.Parse(strings.ReplaceAll(upstreamAddr, portRange, "0"))
 				if err != nil {
-					return parsedAddr{}, fmt.Errorf("parsing upstream URL: %v", err)
+					return parsedAddr{}, fmt.Errorf("parsing upstream URL: %v", urlErrorReason(err))
 				}
 				port = portRange
 			} else {
-				return parsedAddr{}, fmt.Errorf("parsing upstream URL: %v", err)
+				return parsedAddr{}, fmt.Errorf("parsing upstream URL: %v", urlErrorReason(err))
 			}
 		}
 		if port == "" {

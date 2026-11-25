@@ -99,7 +99,7 @@ func (adminUpstreams) handleUpstreams(w http.ResponseWriter, r *http.Request) er
 		knownHosts[address] = struct{}{}
 
 		results = append(results, upstreamStatus{
-			Address:     address,
+			Address:     upstreamAddressWithoutUserinfo(address),
 			NumRequests: upstream.NumRequests(),
 			Fails:       upstream.Fails(),
 		})
@@ -110,7 +110,7 @@ func (adminUpstreams) handleUpstreams(w http.ResponseWriter, r *http.Request) er
 	for address, count := range currentInFlight {
 		if _, exists := knownHosts[address]; !exists && count > 0 {
 			results = append(results, upstreamStatus{
-				Address:     address,
+				Address:     upstreamAddressWithoutUserinfo(address),
 				NumRequests: int(count),
 				Fails:       0,
 			})
@@ -125,7 +125,7 @@ func (adminUpstreams) handleUpstreams(w http.ResponseWriter, r *http.Request) er
 	dynamicHostsMu.RLock()
 	for address, entry := range dynamicHosts {
 		results = append(results, upstreamStatus{
-			Address:     address,
+			Address:     upstreamAddressWithoutUserinfo(address),
 			NumRequests: entry.host.NumRequests(),
 			Fails:       entry.host.Fails(),
 		})

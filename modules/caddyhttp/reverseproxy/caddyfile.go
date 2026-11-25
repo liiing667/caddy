@@ -224,7 +224,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for _, up := range d.RemainingArgs() {
 		err := appendUpstream(up)
 		if err != nil {
-			return fmt.Errorf("parsing upstream '%s': %w", up, err)
+			return fmt.Errorf("parsing upstream address: %w", err)
 		}
 	}
 
@@ -248,7 +248,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			for _, up := range args {
 				err := appendUpstream(up)
 				if err != nil {
-					return fmt.Errorf("parsing upstream '%s': %w", up, err)
+					return fmt.Errorf("parsing upstream address: %w", err)
 				}
 			}
 
@@ -370,6 +370,9 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		case "health_upstream":
 			if !d.NextArg() {
 				return d.ArgErr()
+			}
+			if upstreamAddressHasUserinfo(d.Val()) {
+				return d.WrapErr(errUpstreamUserinfo)
 			}
 			if h.HealthChecks == nil {
 				h.HealthChecks = new(HealthChecks)

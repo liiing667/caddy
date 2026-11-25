@@ -137,7 +137,7 @@ func cmdReverseProxy(fs caddycmd.Flags) (int, error) {
 	for i, toLoc := range to {
 		addr, err := parseUpstreamDialAddress(toLoc)
 		if err != nil {
-			return caddy.ExitCodeFailedStartup, fmt.Errorf("invalid upstream address %s: %v", toLoc, err)
+			return caddy.ExitCodeFailedStartup, fmt.Errorf("invalid upstream address: %v", err)
 		}
 		if addr.scheme != "" && toScheme == "" {
 			toScheme = addr.scheme
@@ -158,7 +158,7 @@ func cmdReverseProxy(fs caddycmd.Flags) (int, error) {
 	for _, toAddr := range toAddresses {
 		parsedAddr, err := caddy.ParseNetworkAddress(toAddr)
 		if err != nil {
-			return caddy.ExitCodeFailedStartup, fmt.Errorf("invalid upstream address %s: %v", toAddr, err)
+			return caddy.ExitCodeFailedStartup, fmt.Errorf("invalid upstream address: %v", err)
 		}
 
 		if parsedAddr.StartPort == 0 && parsedAddr.EndPort == 0 {
