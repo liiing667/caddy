@@ -366,6 +366,29 @@ func (admin AdminConfig) allowedOrigins(addr NetworkAddress) []*url.URL {
 	return allowed
 }
 
+// validateLocalListen rejects a plaintext (local) admin endpoint that
+// would be reachable from a non-loopback interface without an explicit
+// access policy. The local endpoint has no authentication of its own:
+// on a wildcard listener its Host check is disabled entirely, and on a
+// specific interface the Host/Origin checks only mitigate DNS rebinding
+// and browser-based cross-site requests, which a non-browser client can
+// trivially bypass. Allowing such a listener to start would expose the
+// configuration change API (and thus effectively the whole process) to
+// anyone who can reach the port.
+//
+// Loopback addresses and unix/file-descriptor sockets rely on operating
+// system access controls and remain allowed without further config. An
+// explicit, non-nil origins list counts as an operator-declared access
+// policy; operators who need network-reachable administration should
+// configure origins, or use the remote (mutual-TLS) admin endpoint.
+func (admin AdminConfig) validateLocalListen(addr NetworkAddress) error {
+	if addr.isLoopback() || admin.Origins != nil {
+		return nil
+	}
+	return fmt.Errorf("admin endpoint listening on %s is reachable from a non-loopback interface, but the local (plaintext) endpoint has no authentication; either bind it to a loopback address (e.g. %s), explicitly configure trusted origins via the 'origins' option, disable the admin endpoint, or use the remote (mutual-TLS) admin endpoint",
+		addr.String(), DefaultAdminListen)
+}
+
 // replaceLocalAdminServer replaces the running local admin server
 // according to the relevant configuration in cfg. If no configuration
 // for the admin endpoint exists in cfg, a default one is used, so
@@ -412,6 +435,10 @@ func replaceLocalAdminServer(cfg *Config, ctx Context) error {
 	// extract a singular listener address
 	addr, err := parseAdminListenAddr(cfg.Admin.Listen, DefaultAdminListen)
 	if err != nil {
+		return err
+	}
+
+	if err := cfg.Admin.validateLocalListen(addr); err != nil {
 		return err
 	}
 
