@@ -157,6 +157,12 @@ type Handler struct {
 	// By default, all headers are passed-thru without changes,
 	// with the exceptions of special hop-by-hop headers.
 	//
+	// Client Authorization credentials are not replayed to a different
+	// upstream or a later proxy handler unless this handler explicitly
+	// configures the Authorization header (for example, with `header_up
+	// Authorization`). This prevents client credentials from leaking
+	// across route boundaries.
+	//
 	// X-Forwarded-For, X-Forwarded-Proto and X-Forwarded-Host
 	// are also set implicitly.
 	Headers *headers.Handler `json:"headers,omitempty"`
@@ -909,6 +915,8 @@ func (h *Handler) proxyLoopIteration(r *http.Request, origReq *http.Request, w h
 		normalizeWebsocketHeaders(r.Header)
 	}
 
+	h.scopeClientCredentials(r, dialInfo, userOps)
+
 	// proxy the request to that upstream
 	proxyErr = h.reverseProxy(w, r, origReq, repl, dialInfo, next)
 	if proxyErr == nil {
@@ -968,6 +976,106 @@ func normalizeWebsocketHeaders(header http.Header) {
 			delete(header, k)
 			header[rk] = v
 		}
+	}
+}
+
+// credentialDisclosureVarKey is the request variable which records the
+// upstreams that received client credentials. Proxy handlers in the same
+// request share this state so credentials cannot silently cross a handler or
+// upstream boundary.
+const credentialDisclosureVarKey = "http.reverse_proxy.credential_disclosure"
+
+// credentialDisclosure tracks each proxy handler and upstream pair that has
+// received a particular Authorization value during this request.
+type credentialDisclosure struct {
+	recipients []credentialRecipient
+}
+
+// credentialRecipient identifies a proxy handler and upstream to which a
+// particular Authorization value was disclosed.
+type credentialRecipient struct {
+	handler  *Handler
+	upstream string
+	values   []string
+}
+
+// headerOpsExplicitlyTrustAuthorization reports whether ops configure the
+// Authorization header explicitly. Such configuration is an opt-in: it is the
+// proxy's way of declaring that its upstreams are trusted with client
+// credentials, including when a request has already reached another upstream.
+func headerOpsExplicitlyTrustAuthorization(ops *headers.HeaderOps) bool {
+	if ops == nil {
+		return false
+	}
+	isAuthorization := func(field string) bool {
+		return strings.EqualFold(field, "Authorization")
+	}
+	for field := range ops.Set {
+		if isAuthorization(field) {
+			return true
+		}
+	}
+	for field := range ops.Add {
+		if isAuthorization(field) {
+			return true
+		}
+	}
+	for field := range ops.Replace {
+		// A wildcard replacement is not a declaration that the upstream is
+		// trusted with credentials; it only says to rewrite whatever is there.
+		if field != "*" && isAuthorization(field) {
+			return true
+		}
+	}
+	return false
+}
+
+// scopeClientCredentials prevents client credentials from being replayed to a
+// different route or upstream after they have already been disclosed to one.
+// An explicit header_up Authorization operation opts this handler's upstreams
+// into receiving the credentials. When the Authorization value has changed
+// (for example because forwarding auth returned a new token), it is not the
+// credential that was previously disclosed and is allowed through.
+func (h *Handler) scopeClientCredentials(r *http.Request, di DialInfo, userOps *headers.HeaderOps) {
+	values, ok := r.Header[http.CanonicalHeaderKey("Authorization")]
+	if !ok || len(values) == 0 || (len(values) == 1 && values[0] == "") {
+		return
+	}
+
+	disclosure, _ := caddyhttp.GetVar(r.Context(), credentialDisclosureVarKey).(*credentialDisclosure)
+	if disclosure == nil {
+		disclosure = new(credentialDisclosure)
+		caddyhttp.SetVar(r.Context(), credentialDisclosureVarKey, disclosure)
+	}
+
+	recipient := credentialRecipient{
+		handler:  h,
+		upstream: di.Address,
+		values:   slices.Clone(values),
+	}
+	alreadyRecorded := false
+	disclosedElsewhere := false
+	for _, previous := range disclosure.recipients {
+		if !slices.Equal(previous.values, values) {
+			continue
+		}
+		if previous.handler == recipient.handler && previous.upstream == recipient.upstream {
+			alreadyRecorded = true
+			continue
+		}
+		disclosedElsewhere = true
+	}
+
+	if disclosedElsewhere && !headerOpsExplicitlyTrustAuthorization(userOps) {
+		// Clone before deleting so reqHeader (the immutable set of original
+		// headers used for later retries) is not mutated as a side effect.
+		r.Header = r.Header.Clone()
+		delete(r.Header, http.CanonicalHeaderKey("Authorization"))
+		return
+	}
+
+	if !alreadyRecorded {
+		disclosure.recipients = append(disclosure.recipients, recipient)
 	}
 }
 
